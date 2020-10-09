@@ -1,0 +1,417 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Diagram with SVG</title>
+<style>
+svg {
+   border:1px solid slategray;
+}
+svg .selected {
+   stroke:violet;
+}
+
+svg .ondrag {
+   stroke:blue;
+}
+
+svg use {
+   cursor:grab;
+}
+
+svg path.wire {
+    stroke-linecap: square;
+}
+
+main {
+  display:flex;
+  margin: auto;
+  width: 960px;
+}
+
+main .asidebar {
+}
+
+main .asidebar button {
+   display:block;
+   width:100%;
+}
+
+main svg {
+  margin: 0 0.5rem;
+}
+
+rect.grid {
+  /*
+  fill:"url(#grid)";
+  */
+  stroke:none;
+}
+rect.nogrid {
+  display:none;
+}
+
+button {
+    font-family: consolas;
+    background-color: lightyellow;
+    border-style: ridge;
+    margin-top: 1px;
+    line-height: 1.8;
+    border-radius: 2px;
+}
+
+</style>
+</head>
+<body>
+
+<main>
+<aside class="asidebar">
+  <button onclick="diagram_toggle_grid()">grid</button>
+  <button onclick="diagram_add_wire()">Wire</button>
+  <button onclick="diagram_add_use('vdd')">vdd</button>
+  <button onclick="diagram_add_use('vss')">vss</button>
+  <button onclick="diagram_add_use('pmos')">pmos</button>
+  <button onclick="diagram_add_use('nmos')">nmos</button>
+  <button onclick="diagram_add_use('buf')">buf</button>
+  <button onclick="diagram_add_use('inv')">inv</button>
+  <button onclick="diagram_add_use('mux')">mux</button>
+  <button onclick="diagram_add_use('dff')">dff</button>
+  <button onclick="diagram_add_use('clk')">clk</button>
+  <button onclick="diagram_add_use('icg')">icg</button>
+</aside>
+<div>
+<svg stroke="black" viewBox="-320 -320 640 640" width="640" height="640">
+  <defs>
+      <pattern id="grid" patternUnits="userSpaceOnUse" width="10" height="10">
+        <path d="M 0,10 h 10 v -10" stroke="silver" fill="none" stroke-width="0.5"/>
+      </pattern>
+
+
+  <symbol id="nmos" width="25" height="50" transform="translate(-24, 0)" viewBox="-25 0 25 50">
+     <path fill="none" d="M -1,0 v 10 h -10 v 20 h 10 v 10 M -15,10 v 20 M -20,20 h 5"/>
+     <rect x="-20" y="0" width="20" height="40" fill="transparent" stroke="none"/>
+  </symbol>
+
+  <symbol id="pmos" width="25" height="50" transform="translate(-24, 0)" viewBox="-25 0 25 50">
+     <rect x="-20" y="0" width="20" height="40" fill="transparent" stroke="none"/>
+     <path fill="none" d="M -1,0 v 10 h -10 v 20 h 10 v 10 M -15,10 v 20 M -15,20 a 2.5 2.5 360 1 1 0 0"/>
+     <circle cx="-18" cy="20" r="3.0" fill="none"/>
+  </symbol>
+
+  <symbol id="vdd" width="20" height="20" transform="translate(-10, 0)" viewBox="-10 0 20 20">
+     <path fill="none" d="M 0,10 v 10 M -10,10 h 20"/>
+     <rect x="-10" y="0" width="20" height="20" fill="transparent" stroke="none"/>
+  </symbol>
+  <symbol id="vss" width="20" height="20" transform="translate(-10, 0)" viewBox="-10 0 20 20">
+     <path fill="none" d="M -10,1 h 20 M -6,5 h 12 M -3,10 h 6"/>
+     <rect x="-10" y="0" width="20" height="20" fill="transparent" stroke="none"/>
+  </symbol>
+
+  <symbol id="buf" width="40" height="25" viewBox="-10 -10 40 25">
+     <path fill="transparent" d="M 0,-10 v 20 l 20,-10 l -20,-10 M 0,0 h -10 M 20,0 h 10"/>
+  </symbol>
+
+  <symbol id="inv" width="50" height="25" viewBox="-10 -10 50 25">
+     <path fill="transparent" d="M 0,-10 v 20 l 20,-10 l -20,-10 M 0,0 h -10 M 26,0 h 14"/>
+     <circle cx="23" cy="0" r="3.0" fill="none"/>
+  </symbol>
+
+  <symbol id="mux" width="40" height="60" viewBox="-10 -30 40 60">
+     <path fill="transparent" d="M 0,-20 v 40 l 20,-10 v -20 l -20,-10 M 20,0 h 10 M 0,10 h -20 M0,-10h-20"/>
+  </symbol>
+
+  <symbol id="dff" width="60" height="80" viewBox="-10 -70 60 80">
+     <rect x="0" y="-60" width="40" height="60" fill="transparent"/>
+     <path fill="transparent"
+        d=" M 0,-15 l 10,5 l -10,5 z 
+            M 0,-10 h -10 z 
+            M 0,-50 h -10 z
+            M 40,-50 h10"/>
+  </symbol>
+  <symbol id="clk" width="50" height="30" viewBox="-10 -20 50 30">
+     <path fill="transparent" d="M 0,0 h 10 v -10 h 10 v 10 h 10"/>
+  </symbol>
+  <symbol id="icg" width="60" height="60" viewBox="-10 -60 60 60">
+     <rect x="0" y="-40" width="30" height="40" fill="transparent"/>
+     <path fill="transparent"
+        d=" M 0,-25 l 10,5 l -10,5 z 
+            M 0,-20 h -10 z 
+            M 30,-20 h10"/>
+  </symbol>
+  </defs>
+
+  <rect class="grid" x="-50%" y="-50%" width="100%" height="100%" fill="url(#grid)"/>
+
+  <g class="diagram" data-transform="scale(1,-1)">
+      <!--path d="M 50,50 h 50 v 50" fill="none"/-->
+      <path class="wire" d="M 50,50 v 50" fill="translate" stroke-width="5" clip-path="inset(0 1)"/>
+      <path class="wire" d="M -50,-50 h 50" fill="translate" stroke-width="5"/>
+      <use href="#vdd"  x="100" y="50"/>
+      <use href="#nmos" x="100" y="100"/>
+      <use href="#pmos" x="100" y="160"/>
+      <use href="#vss"  x="100" y="220"/>
+      <use href="#buf"  x="100" y="-100"/>
+      <use href="#inv"  x="100" y="-150"/>
+      <use href="#mux"  x="100" y="-300"/>
+      <use href="#dff"  x="200" y="-300"/>
+      <use draggable=true href="#icg"  x="200" y="-100"/>
+      <use href="#clk"  x="200" y="-200"/>
+  </g>
+</svg>
+</div>
+<aside class="metabar">
+  <input v-if="editmeta.path" id="path-d" type="text" v-model="editmeta.path" v-on:keyup.enter="update_meta">
+</aside>
+</main>
+
+<script src="vendor/vue.min.js"></script>
+<script>
+var diagram_state = {
+  selected: null,
+  editmeta: {
+    path:null 
+  } 
+};
+function diagram_select(el){
+   diagram_state.selected = el;
+   if(el.tagName == "path"){
+      diagram_state.editmeta.path = el.getAttribute("d");
+   } else {
+      diagram_state.editmeta.path = null; 
+   }
+}
+new Vue({
+  el: 'aside.metabar',
+  data: diagram_state,
+  methods: {
+    update_meta: function(evt){
+      console.log("hi", evt.target.value);
+      let d = evt.target.value;
+      console.log(globalSelected);
+      globalSelected.setAttribute("d", d);
+    }
+  }
+});
+</script>
+<script>
+var globalSelected;
+
+
+function svg_snap_grid(x){
+   return Math.round(x/10.0)*10; 
+}
+
+function getSVGLocation(evt, matrix){
+ var dragX = evt.clientX, dragY = evt.clientY;
+ var svgX, svgY;
+
+ if(0){
+   dragX = svgX*matrix.a + matrix.e;
+   dragY = svgY*matrix.d + matrix.f;
+ }else{
+   svgX = (dragX-matrix.e)/matrix.a;
+   svgY = (dragY-matrix.f)/matrix.d;
+ }
+ return {x:svgX, y:svgY};
+}
+
+
+var activeElement;
+
+function add_wire_segment(x, y, is_click){
+        x = Math.round(x);
+        y = Math.round(y);
+
+        let x1 = parseFloat(activeElement.dataset.x1);
+        let y1 = parseFloat(activeElement.dataset.y1);
+
+        x = svg_snap_grid(x);
+        y = svg_snap_grid(y);
+        x1 = svg_snap_grid(x1);
+        y1 = svg_snap_grid(y1);
+
+        let dx = x-x1, dy = y-y1;
+        let segment;
+        if(Math.abs(dx)>=Math.abs(dy)){
+           segment = `M ${x1},${y1} h ${dx}`;  
+           dy = 0;
+        }else{
+           segment = `M ${x1},${y1} v ${dy}`;  
+           dx = 0;
+        }
+        activeElement.setAttribute("d", activeElement.dataset.head + segment);
+
+     x = x1 + dx;
+     y = y1 + dy;
+     if(is_click){
+       activeElement.dataset.head = activeElement.getAttribute("d");
+       activeElement.dataset.x1 = x;
+       activeElement.dataset.y1 = y;
+       activeElement.setAttribute("d", activeElement.dataset.head + ` M ${x},${y} h 0`);
+     }
+
+}
+
+function svg_drag(svg, target){
+  var selectedElement = null;
+  var future;
+
+  // var svg = target.ownerSVGElement;
+
+
+  document.body.addEventListener("keyup", function(evt){
+     console.log("keyup", evt.key, evt.code);
+     if(evt.key == "Delete"){
+       evt.stopPropagation();
+       evt.stopImmediatePropagation();
+       evt.preventDefault();
+
+       globalSelected.parentElement.removeChild(globalSelected);
+       globalSelected = null;
+       return false;
+     }
+
+     if(activeElement && evt.key == "Escape"){
+        activeElement.setAttribute("d", activeElement.dataset.head);
+        activeElement = null;
+     }
+  });
+
+  svg.addEventListener("dragstart", function(evt){
+     console.log("dragstart");
+  });
+
+  svg.addEventListener("click", function(evt){
+     if(!evt.shiftKey) return;
+     console.log("click", getSVGLocation(evt, svg.getScreenCTM()));
+     let point = getSVGLocation(evt, svg.getScreenCTM());
+     if(!activeElement){
+	 var el = document.createElementNS("http://www.w3.org/2000/svg", "path")
+	 el.setAttribute("class", "draw-wire wire");
+	 el.setAttribute("d", "");
+	 el.dataset.x1 = Math.round(point.x);
+	 el.dataset.y1 = Math.round(point.y);
+	 el.dataset.head  = "";
+         diagram_add_element(el);
+
+	 activeElement = el;
+     }
+     add_wire_segment(point.x, point.y, 1);
+  });
+
+  svg.addEventListener("mousedown", function(evt){
+     // selectedElement = target; //evt.target;
+     let target = evt.target;
+     console.log(target);
+     if(!(target.tagName == "use" || target.tagName=="path")){
+        return;
+     }
+     selectedElement = target;
+     selectedElement.classList.add("ondrag");
+
+     if(globalSelected){
+        globalSelected.classList.remove("selected");
+     }
+     globalSelected = selectedElement;
+     globalSelected.classList.add("selected");
+     diagram_select(globalSelected);
+
+     // if(target.tagName == "path"){
+     //     document.getElementById("path-d").value = target.getAttribute("d");
+     // }
+
+     var bbox = selectedElement.getBBox(); 
+     var matrix = selectedElement.getScreenCTM();
+     var loc  = getSVGLocation(evt, matrix);
+
+     future = future || {timer:null, x:0, y:0, dx:0, dy:0, matrix:matrix}; 
+     future.dx = loc.x; // loc.x - bbox.x;
+     future.dy = loc.y; // loc.y - bbox.y;
+  });
+
+  svg.addEventListener("mouseup", function(evt){
+     svg.style.cursor = "auto";
+     if(selectedElement){
+        selectedElement.classList.remove("ondrag");
+     }
+     selectedElement = null;
+  });
+
+
+  svg.addEventListener("mousemove", function(evt){
+     if(evt.buttons === 1){
+       console.log("is drag", evt.buttons);
+     }
+     if(activeElement){
+        let point = getSVGLocation(evt, svg.getScreenCTM());
+        add_wire_segment(point.x, point.y);
+        return;
+     }
+
+     if(!selectedElement){
+        return;
+     }
+     svg.style.cursor = "move";
+
+     future.x = evt.clientX;
+     future.y = evt.clientY;
+     future.matrix = svg.getScreenCTM();
+     future.element = selectedElement;
+
+     if(future.timer) {
+       return;
+     }
+
+
+     future.timer = window.requestAnimationFrame(function(){
+         var dragX = future.x, dragY=future.y, matrix=future.matrix;
+         var svgX, svgY;
+
+         if(0){
+           dragX = svgX*matrix.a + matrix.e;
+           dragY = svgY*matrix.d + matrix.f;
+         }else{
+           svgX = (dragX-matrix.e)/matrix.a;
+           svgY = (dragY-matrix.f)/matrix.d;
+         }
+         svgX -= future.dx;
+         svgY -= future.dy;
+         // console.log(future);
+         svgX = Math.round(svgX/10)*10;
+         svgY = Math.round(svgY/10)*10;
+
+         var transform = `translate(${svgX}, ${svgY})`;
+         // console.log(transform);
+         future.element.setAttribute("transform", transform);
+         future.timer=null;
+     });
+  });
+  
+}
+
+var svg = document.querySelector("svg");
+svg_drag(svg);
+
+function diagram_add_wire(){
+   var el = document.createElementNS("http://www.w3.org/2000/svg", "path")
+   el.setAttribute("d", "M 100,100 h 50");
+   diagram_add_element(el);
+}
+
+function diagram_toggle_grid(){
+   svg.querySelector("rect.grid").classList.toggle("nogrid");
+}
+
+function diagram_add_element(el){
+   svg.querySelector("g.diagram").appendChild(el);
+}
+
+function diagram_add_use(name){
+   var el = document.createElementNS("http://www.w3.org/2000/svg", "use")
+   el.setAttribute("href", "#" + name);
+   el.setAttribute("x", "0");
+   el.setAttribute("y", "0");
+   diagram_add_element(el);
+}
+</script>
+</body>
+</html>
