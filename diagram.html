@@ -34,6 +34,26 @@ main .asidebar {
 main .asidebar button {
    display:block;
    width:100%;
+   font-family: consolas;
+   background-color: lightyellow;
+   border: 1px solid slategray;
+   margin-top: 1px;
+   line-height: 1.8;
+   border-radius: 50%;
+}
+
+.asidebar button.tool {
+  background-color: azure;
+  border-radius: 0;
+}
+
+hr.sp {
+  visibility: hidden;
+}
+
+.metabar > * {
+   display:block;
+   width:100%;
 }
 
 main svg {
@@ -50,23 +70,16 @@ rect.nogrid {
   display:none;
 }
 
-button {
-    font-family: consolas;
-    background-color: lightyellow;
-    border-style: ridge;
-    margin-top: 1px;
-    line-height: 1.8;
-    border-radius: 2px;
-}
-
 </style>
 </head>
 <body>
 
 <main>
 <aside class="asidebar">
-  <button onclick="diagram_toggle_grid()">grid</button>
-  <button onclick="diagram_add_wire()">Wire</button>
+  <button class="tool" onclick="diagram_toggle_grid()">grid</button>
+  <button class="tool" onclick="diagram_clear()">clear</button>
+  <hr class="sp"/>
+  <button onclick="diagram_add_wire()">wire</button>
   <button onclick="diagram_add_use('vdd')">vdd</button>
   <button onclick="diagram_add_use('vss')">vss</button>
   <button onclick="diagram_add_use('pmos')">pmos</button>
@@ -251,8 +264,9 @@ function add_wire_segment(x, y, is_click){
 
 }
 
+var selectedElement = null;
+
 function svg_drag(svg, target){
-  var selectedElement = null;
   var future;
 
   // var svg = target.ownerSVGElement;
@@ -276,11 +290,11 @@ function svg_drag(svg, target){
      }
   });
 
-  svg.addEventListener("dragstart", function(evt){
-     console.log("dragstart");
-  });
 
   svg.addEventListener("click", function(evt){
+     diagram_select_element(evt.target);
+
+
      if(!evt.shiftKey) return;
      console.log("click", getSVGLocation(evt, svg.getScreenCTM()));
      let point = getSVGLocation(evt, svg.getScreenCTM());
@@ -299,41 +313,28 @@ function svg_drag(svg, target){
   });
 
   svg.addEventListener("mousedown", function(evt){
-     // selectedElement = target; //evt.target;
      let target = evt.target;
-     console.log(target);
      if(!(target.tagName == "use" || target.tagName=="path")){
         return;
      }
-     selectedElement = target;
-     selectedElement.classList.add("ondrag");
 
-     if(globalSelected){
-        globalSelected.classList.remove("selected");
-     }
-     globalSelected = selectedElement;
-     globalSelected.classList.add("selected");
-     diagram_select(globalSelected);
+     console.log(target);
+     selectedElement = evt.target;
+     var dragstart_event = new Event('dragstart',{"bubbles":true, "cancelable":true});
+     dragstart_event.clientX = evt.clientX;
+     dragstart_event.clientY = evt.clientY;
+     selectedElement.dispatchEvent(dragstart_event);
 
-     // if(target.tagName == "path"){
-     //     document.getElementById("path-d").value = target.getAttribute("d");
-     // }
-
-     var bbox = selectedElement.getBBox(); 
-     var matrix = selectedElement.getScreenCTM();
-     var loc  = getSVGLocation(evt, matrix);
-
-     future = future || {timer:null, x:0, y:0, dx:0, dy:0, matrix:matrix}; 
-     future.dx = loc.x; // loc.x - bbox.x;
-     future.dy = loc.y; // loc.y - bbox.y;
   });
 
   svg.addEventListener("mouseup", function(evt){
-     svg.style.cursor = "auto";
      if(selectedElement){
-        selectedElement.classList.remove("ondrag");
+        var dragend_event = new Event('dragend',{"bubbles":true, "cancelable":true});
+        dragend_event.clientX = evt.clientX;
+        dragend_event.clientY = evt.clientY;
+        selectedElement.dispatchEvent(dragend_event);
+        selectedElement = null;
      }
-     selectedElement = null;
   });
 
 
@@ -341,21 +342,55 @@ function svg_drag(svg, target){
      if(evt.buttons === 1){
        console.log("is drag", evt.buttons);
      }
+
      if(activeElement){
         let point = getSVGLocation(evt, svg.getScreenCTM());
         add_wire_segment(point.x, point.y);
         return;
-     }
-
-     if(!selectedElement){
+     }else if(selectedElement && evt.buttons===1){
+        var drag_event = new Event('drag',{"bubbles":true, "cancelable":true});
+        drag_event.clientX = evt.clientX;
+        drag_event.clientY = evt.clientY;
+        selectedElement.dispatchEvent(drag_event);
+        return;
+     }else if(selectedElement){
+        var drag_event = new Event('place',{"bubbles":true, "cancelable":true});
+        drag_event.clientX = evt.clientX;
+        drag_event.clientY = evt.clientY;
+        selectedElement.dispatchEvent(drag_event);
         return;
      }
+
+  });
+
+  svg.addEventListener("dragstart", function(evt){
+     let dragElement = evt.target;
+     console.log("dragstart", dragElement);
+
+     dragElement.classList.add("ondrag");
+
+     var bbox   = dragElement.getBBox(); 
+     var matrix = dragElement.getScreenCTM();
+     var loc    = getSVGLocation(evt, matrix);
+
+     future = future || {timer:null, x:0, y:0, dx:0, dy:0, matrix:matrix}; 
+     future.dx = loc.x; // loc.x - bbox.x;
+     future.dy = loc.y; // loc.y - bbox.y;
+  });
+
+  svg.addEventListener("dragend", function(evt){
+     svg.style.cursor = "auto";
+     let dragElement = evt.target;
+     dragElement.classList.remove("ondrag");
+  });
+
+  svg.addEventListener("drag", function(evt){
      svg.style.cursor = "move";
 
      future.x = evt.clientX;
      future.y = evt.clientY;
      future.matrix = svg.getScreenCTM();
-     future.element = selectedElement;
+     future.element = evt.target;
 
      if(future.timer) {
        return;
@@ -384,12 +419,52 @@ function svg_drag(svg, target){
          future.element.setAttribute("transform", transform);
          future.timer=null;
      });
+
+  });
+
+  svg.addEventListener("place", function(evt){
+     svg.style.cursor = "move";
+
+     future.x = evt.clientX;
+     future.y = evt.clientY;
+     future.matrix = svg.getScreenCTM();
+     future.element = evt.target;
+
+     if(future.timer) {
+       return;
+     }
+
+
+     future.timer = window.requestAnimationFrame(function(){
+         var dragX = future.x, dragY=future.y, matrix=future.matrix;
+         var svgX, svgY;
+
+         svgX = (dragX-matrix.e)/matrix.a;
+         svgY = (dragY-matrix.f)/matrix.d;
+
+         svgX = Math.round(svgX/10)*10;
+         svgY = Math.round(svgY/10)*10;
+
+         future.element.setAttribute("x", svgX);
+         future.element.setAttribute("y", svgY);
+         future.timer=null;
+     });
+
   });
   
 }
 
 var svg = document.querySelector("svg");
 svg_drag(svg);
+
+function diagram_select_element(target){
+     if(globalSelected){
+        globalSelected.classList.remove("selected");
+     }
+     globalSelected = target;
+     globalSelected.classList.add("selected");
+     diagram_select(globalSelected);
+}
 
 function diagram_add_wire(){
    var el = document.createElementNS("http://www.w3.org/2000/svg", "path")
@@ -401,16 +476,28 @@ function diagram_toggle_grid(){
    svg.querySelector("rect.grid").classList.toggle("nogrid");
 }
 
+function diagram_clear(){
+   svg.querySelector("g.diagram").innerHTML = "";
+}
+
 function diagram_add_element(el){
    svg.querySelector("g.diagram").appendChild(el);
 }
 
 function diagram_add_use(name){
+   let x = -1000, y = -1000;
    var el = document.createElementNS("http://www.w3.org/2000/svg", "use")
    el.setAttribute("href", "#" + name);
-   el.setAttribute("x", "0");
-   el.setAttribute("y", "0");
+   el.setAttribute("x", x);
+   el.setAttribute("y", y);
    diagram_add_element(el);
+   // el.classList.add("ondrag");
+
+   selectedElement = el;
+   var dragstart_event = new Event('dragstart',{"bubbles":true, "cancelable":true});
+   dragstart_event.clientX = x-50;
+   dragstart_event.clientY = y-50;
+   selectedElement.dispatchEvent(dragstart_event);
 }
 </script>
 </body>
