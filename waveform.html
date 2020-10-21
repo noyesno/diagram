@@ -1,0 +1,74 @@
+
+<style>
+.waveform svg {
+  display:inline-block;
+  background-color: lightyellow;
+}
+.waveform label {
+  display:inline-block;
+  vertical-align:top;
+}
+.waveform label input {
+  height:30px;
+}
+</style>
+<main>
+<h1>Waveform</h1>
+  <waveform wave="0 50 50 50 50 50"></waveform>
+  <waveform wave="1 50 100 100"></waveform>
+  <waveform wave="0 150 50 50"></waveform>
+  <hr/>
+  <waveform wave="0 50 50 50 50 50"></waveform>
+  <waveform wave="1 40 100 100"></waveform>
+  <waveform wave="0 150 50 50"></waveform>
+  <hr/>
+  <waveform wave="0 50 50 50 50 50"></waveform>
+  <waveform wave="1 60 100 100"></waveform>
+  <waveform wave="0 50 10 100 40 50"></waveform>
+</main>
+
+<script src="vendor/vue.min.js"></script>
+<script>
+Vue.component('waveform', {
+  props: ['wave'],
+  data: function(){
+    return {
+      // wave:'30 30 30 30'
+    };
+  },
+  computed: {
+    wave_path: function(){
+       let i = 0, level=20; 
+       let path = [];
+       for(let len of this.wave.split(/\s+/)){
+         if(i==0){
+           if(len=="0"){
+              path.push(`M 0,0`);  
+           } else {
+              path.push(`M 0,20`);  
+              level = -level; 
+           }
+         } else if(i==1){
+           path.push(`h ${len}`);
+         }else{
+           path.push(`v ${level} h ${len}`);
+         }
+         level = -level; 
+         i++;
+       }
+       return path.join(" ");
+    }
+  },
+  template: `
+     <div class="waveform">
+       <svg width="600" height="30"><path :d="wave_path" fill="none" stroke="black" transform="translate(0,24) scale(1,-1)" /></svg>
+       <label><input type="text" v-model="wave"/></label>
+     </div>
+  `
+});
+</script>
+<script>
+new Vue({
+  el:'main',
+})
+</script>

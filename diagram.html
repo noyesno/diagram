@@ -20,6 +20,7 @@ svg use {
 
 svg path.wire {
     stroke-linecap: square;
+    fill: transparent;
 }
 
 main {
@@ -86,6 +87,7 @@ rect.nogrid {
   <button onclick="diagram_add_use('nmos')">nmos</button>
   <button onclick="diagram_add_use('buf')">buf</button>
   <button onclick="diagram_add_use('inv')">inv</button>
+  <button onclick="diagram_add_use('nand')">nand</button>
   <button onclick="diagram_add_use('mux')">mux</button>
   <button onclick="diagram_add_use('dff')">dff</button>
   <button onclick="diagram_add_use('clk')">clk</button>
@@ -128,6 +130,15 @@ rect.nogrid {
      <circle cx="23" cy="0" r="3.0" fill="none"/>
   </symbol>
 
+  <symbol id="nand" width="70" height="55" viewBox="-10 -10 70 55">
+     <path fill="transparent" d="M 0,0 v 40 h 20 a 20 20 180 0 0 0,-40 h -20
+          M 0,10 h -10
+          M 0,30 h -10
+          M 46,20 h 14
+          "/>
+     <circle cx="43" cy="20" r="3.0" fill="none"/>
+  </symbol>
+
   <symbol id="mux" width="40" height="60" viewBox="-10 -30 40 60">
      <path fill="transparent" d="M 0,-20 v 40 l 20,-10 v -20 l -20,-10 M 20,0 h 10 M 0,10 h -20 M0,-10h-20"/>
   </symbol>
@@ -164,6 +175,7 @@ rect.nogrid {
       <use href="#vss"  x="100" y="220"/>
       <use href="#buf"  x="100" y="-100"/>
       <use href="#inv"  x="100" y="-150"/>
+      <use href="#nand"  x="150" y="-150"/>
       <use href="#mux"  x="100" y="-300"/>
       <use href="#dff"  x="200" y="-300"/>
       <use draggable=true href="#icg"  x="200" y="-100"/>
@@ -231,36 +243,45 @@ function getSVGLocation(evt, matrix){
 var activeElement;
 
 function add_wire_segment(x, y, is_click){
-        x = Math.round(x);
-        y = Math.round(y);
+    x = Math.round(x);
+    y = Math.round(y);
 
-        let x1 = parseFloat(activeElement.dataset.x1);
-        let y1 = parseFloat(activeElement.dataset.y1);
+    let x1 = parseFloat(activeElement.dataset.x1);
+    let y1 = parseFloat(activeElement.dataset.y1);
 
-        x = svg_snap_grid(x);
-        y = svg_snap_grid(y);
-        x1 = svg_snap_grid(x1);
-        y1 = svg_snap_grid(y1);
+    x = svg_snap_grid(x);
+    y = svg_snap_grid(y);
+    x1 = svg_snap_grid(x1);
+    y1 = svg_snap_grid(y1);
 
-        let dx = x-x1, dy = y-y1;
-        let segment;
-        if(Math.abs(dx)>=Math.abs(dy)){
-           segment = `M ${x1},${y1} h ${dx}`;  
-           dy = 0;
-        }else{
-           segment = `M ${x1},${y1} v ${dy}`;  
-           dx = 0;
-        }
-        activeElement.setAttribute("d", activeElement.dataset.head + segment);
+    let dx = x-x1, dy = y-y1;
+    let segment;
+    let path_head = activeElement.dataset.head;
+    if(path_head==""){
+       path_head = `M ${x1},${y1}`;
+    }
+    let abs_dx = Math.abs(dx), abs_dy = Math.abs(dy);
+    let abs_degree = Math.atan2(abs_dy, abs_dx)/Math.PI*180;
+    if(abs_dx >= abs_dy &&  abs_degree<15){
+       segment = dx==0?'':` h ${dx}`;  
+       dy = 0;
+    }else if(abs_dy >= abs_dx && abs_degree<15){
+       segment = dy==0?'':` v ${dy}`;  
+       dx = 0;
+    }else{
+       segment = dy==0&&dx==0?'':` l ${dx},${dy}`;  
+       //
+    }
+    activeElement.setAttribute("d", path_head + segment);
 
-     x = x1 + dx;
-     y = y1 + dy;
-     if(is_click){
-       activeElement.dataset.head = activeElement.getAttribute("d");
-       activeElement.dataset.x1 = x;
-       activeElement.dataset.y1 = y;
-       activeElement.setAttribute("d", activeElement.dataset.head + ` M ${x},${y} h 0`);
-     }
+    if(is_click){
+      x = x1 + dx;
+      y = y1 + dy;
+      activeElement.dataset.head = activeElement.getAttribute("d");
+      activeElement.dataset.x1 = x;
+      activeElement.dataset.y1 = y;
+      // activeElement.setAttribute("d", activeElement.dataset.head + ` M ${x},${y} h 0`);
+    }
 
 }
 
