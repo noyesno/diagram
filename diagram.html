@@ -3,6 +3,10 @@
 <head>
 <title>Diagram with SVG</title>
 <style>
+[v-cloak] {
+  visibility:hidden;
+}
+
 svg {
    border:1px solid slategray;
 }
@@ -71,6 +75,13 @@ rect.nogrid {
   display:none;
 }
 
+svg .diagram text {
+    font-family: consolas;
+    font-size: 14px;
+    stroke: none !important;
+    user-select: none;
+}
+
 </style>
 </head>
 <body>
@@ -79,7 +90,9 @@ rect.nogrid {
 <aside class="asidebar">
   <button class="tool" onclick="diagram_toggle_grid()">grid</button>
   <button class="tool" onclick="diagram_clear()">clear</button>
+  <button class="tool" onclick="diagram_flip()">flip</button>
   <hr class="sp"/>
+  <button onclick="diagram_add_text()">text</button>
   <button onclick="diagram_add_wire()">wire</button>
   <button onclick="diagram_add_use('vdd')">vdd</button>
   <button onclick="diagram_add_use('vss')">vss</button>
@@ -88,6 +101,9 @@ rect.nogrid {
   <button onclick="diagram_add_use('buf')">buf</button>
   <button onclick="diagram_add_use('inv')">inv</button>
   <button onclick="diagram_add_use('nand')">nand</button>
+  <button onclick="diagram_add_use('nor')">nor</button>
+  <button onclick="diagram_add_use('and')">and</button>
+  <button onclick="diagram_add_use('or')">or</button>
   <button onclick="diagram_add_use('mux')">mux</button>
   <button onclick="diagram_add_use('dff')">dff</button>
   <button onclick="diagram_add_use('clk')">clk</button>
@@ -99,6 +115,7 @@ rect.nogrid {
       <pattern id="grid" patternUnits="userSpaceOnUse" width="10" height="10">
         <path d="M 0,10 h 10 v -10" stroke="silver" fill="none" stroke-width="0.5"/>
       </pattern>
+
 
 
   <symbol id="nmos" width="25" height="50" transform="translate(-24, 0)" viewBox="-25 0 25 50">
@@ -130,14 +147,48 @@ rect.nogrid {
      <circle cx="23" cy="0" r="3.0" fill="none"/>
   </symbol>
 
-  <symbol id="nand" width="70" height="55" viewBox="-10 -10 70 55">
-     <path fill="transparent" d="M 0,0 v 40 h 20 a 20 20 180 0 0 0,-40 h -20
-          M 0,10 h -10
-          M 0,30 h -10
-          M 46,20 h 14
+  <symbol id="nand">
+     <path fill="transparent" d="
+          M 10,10 v 40 h 20 a 20 20 180 0 0 0,-40 h -20
+          M 10,20 h -10
+          M 10,40 h -10
+          M 56,30 h 15
           "/>
-     <circle cx="43" cy="20" r="3.0" fill="none"/>
+     <circle cx="53" cy="30" r="3.0" fill="none"/>
   </symbol>
+
+  <symbol id="and">
+     <path fill="transparent" d="
+          M 10,10 v 40 h 20 a 20 20 180 0 0 0,-40 h -20
+          M 10,20 h -10
+          M 10,40 h -10
+          M 56,30 h 15
+          "/>
+  </symbol>
+
+  <symbol id="nor">
+  	<path d="
+           M 10,10 h 10
+           c 15,0 30,10 30,20
+           c 0,10 -15,20 -30,20 h-10
+           c 15,-10 15,-30 0,-40
+           M19,20 h-19
+           M19,40 h-19
+           M56,30 h15" fill="transparent" pointer-events="all"></path>
+     <circle cx="53" cy="30" r="3.0" fill="none"/>
+  </symbol>
+
+  <symbol id="or">
+  	<path d="
+           M 10,10 h 10
+           c 15,0 30,10 30,20
+           c 0,10 -15,20 -30,20 h-10
+           c 15,-10 15,-30 0,-40
+           M19,20 h-19
+           M19,40 h-19
+           M50,30 h20" fill="transparent" pointer-events="all"></path>
+  </symbol>
+  
 
   <symbol id="mux" width="40" height="60" viewBox="-10 -30 40 60">
      <path fill="transparent" d="M 0,-20 v 40 l 20,-10 v -20 l -20,-10 M 20,0 h 10 M 0,10 h -20 M0,-10h-20"/>
@@ -176,6 +227,8 @@ rect.nogrid {
       <use href="#buf"  x="100" y="-100"/>
       <use href="#inv"  x="100" y="-150"/>
       <use href="#nand"  x="150" y="-150"/>
+      <use href="#nor"  x="180" y="-200"/>
+      <circle cx="180" cy="-200" r="3" stroke="red"/>
       <use href="#mux"  x="100" y="-300"/>
       <use href="#dff"  x="200" y="-300"/>
       <use draggable=true href="#icg"  x="200" y="-100"/>
@@ -183,8 +236,16 @@ rect.nogrid {
   </g>
 </svg>
 </div>
-<aside class="metabar">
-  <input v-if="editmeta.path" id="path-d" type="text" v-model="editmeta.path" v-on:keyup.enter="update_meta">
+<aside class="metabar" v-cloak>
+  <label v-if="editmeta.path">
+    Path:<br/>
+    <input type="text" v-model="editmeta.path" v-on:keyup.enter="update_meta">
+  </label>
+
+  <label v-if="editmeta.text">
+    Text:<br/>
+    <input type="text" v-model="editmeta.text" v-on:keyup.enter="update_meta">
+  </label>
 </aside>
 </main>
 
@@ -193,15 +254,23 @@ rect.nogrid {
 var diagram_state = {
   selected: null,
   editmeta: {
-    path:null 
+    path:null, 
+    text:null
   } 
 };
 function diagram_select(el){
    diagram_state.selected = el;
+
+   diagram_state.editmeta.path = null; 
+   diagram_state.editmeta.text = null; 
+
    if(el.tagName == "path"){
       diagram_state.editmeta.path = el.getAttribute("d");
+   } else if(el.tagName == "text"){
+      diagram_state.editmeta.text = el.textContent;
    } else {
       diagram_state.editmeta.path = null; 
+      diagram_state.editmeta.text = null; 
    }
 }
 new Vue({
@@ -212,7 +281,11 @@ new Vue({
       console.log("hi", evt.target.value);
       let d = evt.target.value;
       console.log(globalSelected);
-      globalSelected.setAttribute("d", d);
+      if(globalSelected.tagName=="path"){
+        globalSelected.setAttribute("d", d);
+      } else if(globalSelected.tagName=="text"){
+        globalSelected.textContent = d;
+      }
     }
   }
 });
@@ -262,12 +335,16 @@ function add_wire_segment(x, y, is_click){
     }
     let abs_dx = Math.abs(dx), abs_dy = Math.abs(dy);
     let abs_degree = Math.atan2(abs_dy, abs_dx)/Math.PI*180;
-    if(abs_dx >= abs_dy &&  abs_degree<15){
+    if(0 && abs_dx >= abs_dy &&  abs_degree<15){
        segment = dx==0?'':` h ${dx}`;  
        dy = 0;
-    }else if(abs_dy >= abs_dx && abs_degree<15){
+    }else if(0 && abs_dy >= abs_dx && abs_degree<15){
        segment = dy==0?'':` v ${dy}`;  
        dx = 0;
+    }else if(dy==0 && dx!=0){
+       segment = ` h ${dx}`;  
+    }else if(dx==0 && dy!=0){
+       segment = ` v ${dy}`;  
     }else{
        segment = dy==0&&dx==0?'':` l ${dx},${dy}`;  
        //
@@ -317,6 +394,7 @@ function svg_drag(svg, target){
 
 
      if(!evt.shiftKey) return;
+
      console.log("click", getSVGLocation(evt, svg.getScreenCTM()));
      let point = getSVGLocation(evt, svg.getScreenCTM());
      if(!activeElement){
@@ -335,7 +413,7 @@ function svg_drag(svg, target){
 
   svg.addEventListener("mousedown", function(evt){
      let target = evt.target;
-     if(!(target.tagName == "use" || target.tagName=="path")){
+     if(!(target.tagName == "use" || target.tagName=="path" || target.tagName=="text")){
         return;
      }
 
@@ -435,7 +513,8 @@ function svg_drag(svg, target){
          svgX = Math.round(svgX/10)*10;
          svgY = Math.round(svgY/10)*10;
 
-         var transform = `translate(${svgX}, ${svgY})`;
+         // var transform = `translate(${svgX}, ${svgY})`;
+         var transform = `translate(${svgX}, ${svgY}) ` + future.element.dataset.flip;
          // console.log(transform);
          future.element.setAttribute("transform", transform);
          future.timer=null;
@@ -493,12 +572,27 @@ function diagram_add_wire(){
    diagram_add_element(el);
 }
 
+function diagram_add_text(){
+   var el = document.createElementNS("http://www.w3.org/2000/svg", "text")
+   el.setAttribute("x", "0");
+   el.setAttribute("y", "0");
+   el.textContent = "Text";
+   diagram_add_element(el);
+}
+
 function diagram_toggle_grid(){
    svg.querySelector("rect.grid").classList.toggle("nogrid");
 }
 
 function diagram_clear(){
    svg.querySelector("g.diagram").innerHTML = "";
+}
+
+function diagram_flip(){
+   if(globalSelected){
+     globalSelected.dataset.flip = "scale(-1,1)";
+     globalSelected.setAttribute("transform", "scale(-1,1)");
+   }
 }
 
 function diagram_add_element(el){
