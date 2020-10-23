@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <marker id="marker-triangle" refX="1" refY="5" markerWidth="10" markerHeight="10" markerUnits="userSpaceOnUse" orient="auto">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="none"/>
+    </marker>
+
+     <marker id="marker-dot" refX="0" refY="3" markerWidth="6" markerHeight="6">
+      <circle cx="3" cy="3" r="3" fill="black" />
+    </marker>
+
+     <marker id="marker-circle" refX="0" refY="3" markerWidth="6" markerHeight="6">
+      <circle cx="3" cy="3" r="3" fill="none" />
+    </marker>
+  </defs>
+
+  <circle cx="100" cy="100" r="50" stroke="black" fill="lightyellow"/>
+</svg>

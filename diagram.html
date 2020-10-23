@@ -3,6 +3,24 @@
 <head>
 <title>Diagram with SVG</title>
 <style>
+body {
+    height: 100vh;
+    margin: 0;
+    padding: 1em;
+    box-sizing: border-box;
+}
+
+main {
+  display:flex;
+  margin: auto;
+  width: 960px;
+  height: 100%;
+}
+
+main > section {
+  height: 100%;
+}
+
 [v-cloak] {
   visibility:hidden;
 }
@@ -25,12 +43,6 @@ svg use {
 svg path.wire {
     stroke-linecap: square;
     fill: transparent;
-}
-
-main {
-  display:flex;
-  margin: auto;
-  width: 960px;
 }
 
 main .asidebar {
@@ -94,6 +106,7 @@ svg .diagram text {
   <hr class="sp"/>
   <button onclick="diagram_add_text()">text</button>
   <button onclick="diagram_add_wire()">wire</button>
+  <hr class="sp"/>
   <button onclick="diagram_add_use('vdd')">vdd</button>
   <button onclick="diagram_add_use('vss')">vss</button>
   <button onclick="diagram_add_use('pmos')">pmos</button>
@@ -109,14 +122,29 @@ svg .diagram text {
   <button onclick="diagram_add_use('clk')">clk</button>
   <button onclick="diagram_add_use('icg')">icg</button>
 </aside>
-<div>
-<svg stroke="black" viewBox="-320 -320 640 640" width="640" height="640">
-  <defs>
+<section>
+<svg stroke="black" viewBox="-360 -360 720 640" width="720" height="100%">
+  <defs id="lib-grid">
       <pattern id="grid" patternUnits="userSpaceOnUse" width="10" height="10">
         <path d="M 0,10 h 10 v -10" stroke="silver" fill="none" stroke-width="0.5"/>
       </pattern>
+  </defs>
 
+  <defs id="lib-marker">
+    <marker id="marker-triangle" refX="1" refY="5" markerWidth="10" markerHeight="10" markerUnits="userSpaceOnUse" orient="auto">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="none"/>
+    </marker>
 
+     <marker id="marker-dot" refX="0" refY="3" markerWidth="6" markerHeight="6">
+      <circle cx="3" cy="3" r="3" fill="black" />
+    </marker>
+
+     <marker id="marker-circle" refX="0" refY="3" markerWidth="6" markerHeight="6">
+      <circle cx="3" cy="3" r="3" fill="none" />
+    </marker>
+  </defs>
+
+  <defs id="lib-symbol">
 
   <symbol id="nmos" width="25" height="50" transform="translate(-24, 0)" viewBox="-25 0 25 50">
      <path fill="none" d="M -1,0 v 10 h -10 v 20 h 10 v 10 M -15,10 v 20 M -20,20 h 5"/>
@@ -214,12 +242,14 @@ svg .diagram text {
   </symbol>
   </defs>
 
-  <rect class="grid" x="-50%" y="-50%" width="100%" height="100%" fill="url(#grid)"/>
+  <rect class="grid" x="-200%" y="-200%" width="400%" height="400%" fill="url(#grid)"/>
+  <circle cx="0" cy="0" r="3" fill="silver" stroke="black"/>
 
   <g class="diagram" data-transform="scale(1,-1)">
       <!--path d="M 50,50 h 50 v 50" fill="none"/-->
       <path class="wire" d="M 50,50 v 50" fill="translate" stroke-width="5" clip-path="inset(0 1)"/>
       <path class="wire" d="M -50,-50 h 50" fill="translate" stroke-width="5"/>
+      <path class="wire" d="M -50,-50 h 50" fill="translate" stroke-width="5" marker-end="url(marker.svg#marker-circle)"/>
       <use href="#vdd"  x="100" y="50"/>
       <use href="#nmos" x="100" y="100"/>
       <use href="#pmos" x="100" y="160"/>
@@ -228,23 +258,26 @@ svg .diagram text {
       <use href="#inv"  x="100" y="-150"/>
       <use href="#nand"  x="150" y="-150"/>
       <use href="#nor"  x="180" y="-200"/>
-      <circle cx="180" cy="-200" r="3" stroke="red"/>
+      <circle cx="180" cy="-200" r="3" fill="silver"/>
       <use href="#mux"  x="100" y="-300"/>
       <use href="#dff"  x="200" y="-300"/>
       <use draggable=true href="#icg"  x="200" y="-100"/>
       <use href="#clk"  x="200" y="-200"/>
   </g>
 </svg>
-</div>
+</section>
 <aside class="metabar" v-cloak>
   <label v-if="editmeta.path">
     Path:<br/>
-    <input type="text" v-model="editmeta.path" v-on:keyup.enter="update_meta">
+    <input type="text" name="path" v-model="editmeta.path" v-on:keyup.enter="update_meta"/><br/>
+    <input type="text" name="marker_end" v-model="editmeta.marker_end" v-on:keyup.enter="update_meta"/>
   </label>
 
   <label v-if="editmeta.text">
     Text:<br/>
-    <input type="text" v-model="editmeta.text" v-on:keyup.enter="update_meta">
+    <input type="text" name="text" v-model="editmeta.text" v-on:keyup.enter="update_meta"/><br/>
+    <input type="text" name="text_anchor" title="start middle end"
+       v-model="editmeta.text_anchor" v-on:keyup.enter="update_meta"/>
   </label>
 </aside>
 </main>
@@ -255,7 +288,10 @@ var diagram_state = {
   selected: null,
   editmeta: {
     path:null, 
-    text:null
+    marker_end:null, 
+
+    text:null,
+    text_anchor: null,
   } 
 };
 function diagram_select(el){
@@ -263,11 +299,13 @@ function diagram_select(el){
 
    diagram_state.editmeta.path = null; 
    diagram_state.editmeta.text = null; 
+   diagram_state.editmeta.text_anchor= null; 
 
    if(el.tagName == "path"){
       diagram_state.editmeta.path = el.getAttribute("d");
    } else if(el.tagName == "text"){
       diagram_state.editmeta.text = el.textContent;
+      diagram_state.editmeta.text_anchor = el.getAttribute("text-anchor");
    } else {
       diagram_state.editmeta.path = null; 
       diagram_state.editmeta.text = null; 
@@ -279,12 +317,26 @@ new Vue({
   methods: {
     update_meta: function(evt){
       console.log("hi", evt.target.value);
-      let d = evt.target.value;
+      let value = evt.target.value;
       console.log(globalSelected);
       if(globalSelected.tagName=="path"){
-        globalSelected.setAttribute("d", d);
+        switch(evt.target.name){
+          case "path":
+            globalSelected.setAttribute("d", value);
+            break;
+          case "marker_end":
+            globalSelected.setAttribute("marker-end", `url(#marker-${value})`);
+            break;
+        }
       } else if(globalSelected.tagName=="text"){
-        globalSelected.textContent = d;
+        switch(evt.target.name){
+          case "text":
+            globalSelected.textContent = value;
+            break;
+          case "text_anchor":
+            globalSelected.setAttribute("text-anchor", value);
+            break;
+        }
       }
     }
   }
@@ -514,7 +566,7 @@ function svg_drag(svg, target){
          svgY = Math.round(svgY/10)*10;
 
          // var transform = `translate(${svgX}, ${svgY})`;
-         var transform = `translate(${svgX}, ${svgY}) ` + future.element.dataset.flip;
+         var transform = [`translate(${svgX}, ${svgY})`, future.element.dataset.flip].join(" ");
          // console.log(transform);
          future.element.setAttribute("transform", transform);
          future.timer=null;
@@ -545,8 +597,17 @@ function svg_drag(svg, target){
          svgX = Math.round(svgX/10)*10;
          svgY = Math.round(svgY/10)*10;
 
-         future.element.setAttribute("x", svgX);
-         future.element.setAttribute("y", svgY);
+         future.element.dataset.x = svgX;
+         future.element.dataset.y = svgY;
+
+         if(0){
+           future.element.setAttribute("x", svgX);
+           future.element.setAttribute("y", svgY);
+         }else{
+           var transform = [`translate(${svgX}, ${svgY})`, future.element.dataset.flip].join(" ");
+           future.element.setAttribute("transform", transform);
+         } 
+
          future.timer=null;
      });
 
@@ -603,8 +664,9 @@ function diagram_add_use(name){
    let x = -1000, y = -1000;
    var el = document.createElementNS("http://www.w3.org/2000/svg", "use")
    el.setAttribute("href", "#" + name);
-   el.setAttribute("x", x);
-   el.setAttribute("y", y);
+   el.setAttribute("x", 0);
+   el.setAttribute("y", 0);
+   el.dataset.flip = "";
    diagram_add_element(el);
    // el.classList.add("ondrag");
 
@@ -613,6 +675,19 @@ function diagram_add_use(name){
    dragstart_event.clientX = x-50;
    dragstart_event.clientY = y-50;
    selectedElement.dispatchEvent(dragstart_event);
+}
+
+window.onload = function(){
+  var app_main = document.querySelector("main");
+  var app_svg  = document.querySelector("main svg");
+  console.log(app_main.clientHeight, app_svg);
+  /*
+  app_svg.setAttribute("height", app_main.clientHeight);
+  var app_svg_width  = parseInt(app_svg.getAttribute("width"));
+  var app_svg_height = parseInt(app_svg.getAttribute("height"));
+  var app_svg_viewbox = `-${app_svg_width/2} -${app_svg_height/2} ${app_svg_width} ${app_svg_height}`;
+  app_svg.setAttribute("viewBox", app_svg_viewbox);
+  */
 }
 </script>
 </body>
